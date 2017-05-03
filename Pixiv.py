@@ -12,6 +12,17 @@ import http.cookiejar as cookielib
 import os
 import time
 
+def comfirm_path():
+    path = input('请输入要保存的地址：')
+    if not os.path.exists(path):
+        print('你输入的地址不存在，请重新输入')
+        comfirm_path()
+    else:
+        f = open('path_txt.txt', 'w')
+        f.write(path)
+        f.close()
+    return path
+
 # 自定义输入保存路径
 def path_save():
     if os.path.isfile('path_txt.txt'):
@@ -21,12 +32,8 @@ def path_save():
         return path
 
     else:
-        path = input('请输入要保存的地址：')
-        f = open('path_txt.txt', 'w')
-        f.write(path)
-        f.close()
+        path = comfirm_path()
         return path
-
 #登录
 def login():
     account = input('请输入账号：')
@@ -59,19 +66,7 @@ def get_post_key():
     # print(post_key)
     return post_key
 
-
 path = path_save() #自定义输入保存路径
-
-pro_path = os.getcwd() #源文件运行地址
-os.chdir(path)
-now_time = time.strftime('%Y-%m-%d')
-if os.path.exists(now_time):
-    os.chdir(now_time)
-    # print('文件夹已存在，继续执行')
-else:
-    os.mkdir(now_time)
-    os.chdir(now_time)
-
 
 session = requests.session()
 #第一次登陆后加载保存在本地的cookies
@@ -83,6 +78,16 @@ try:
     n =1
 except:
     print("Cookie 未能加载")
+
+pro_path = os.getcwd() #源文件运行地址
+os.chdir(path)
+now_time = time.strftime('%Y-%m-%d')
+if os.path.exists(now_time):
+    os.chdir(now_time)
+    # print('文件夹已存在，继续执行')
+else:
+    os.mkdir(now_time)
+    os.chdir(now_time)
 
 agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36'
 headers = {
