@@ -3,11 +3,75 @@
 # blog www.irenmu.xyz
 # v1.0 实现爬取今日榜
 # 多线程
+# 模块化
+#保存的文件夹不存在退出
+
 import requests
 from bs4 import BeautifulSoup
 import http.cookiejar as cookielib
 import os
 import time
+
+# 自定义输入保存路径
+def path_save():
+    if os.path.isfile('path_txt.txt'):
+        f = open('path_txt.txt', 'r')
+        path = f.read()
+        f.close()
+        return path
+
+    else:
+        path = input('请输入要保存的地址：')
+        f = open('path_txt.txt', 'w')
+        f.write(path)
+        f.close()
+        return path
+
+#登录
+def login():
+    account = input('请输入账号：')
+    password = input('请输入密码：')
+    postdata = {
+        'post_key': get_post_key(),
+        'password': password,
+        'pixiv_id': account,
+        # 'return_to': 'https://www.pixiv.net/'
+    }
+    login_page = session.post('https://accounts.pixiv.net/api/login?lang=zh', headers=headers, data=postdata)
+    aaa = login_page.json()['body']
+    bbb = {'success': {'return_to': 'https://www.pixiv.net/'}}  #成功登录的提示
+    # print(aaa)
+    if aaa == bbb:
+        os.chdir(pro_path)
+        print(pro_path)
+        session.cookies.save()  # 保存cookie
+        os.chdir(path)
+        os.chdir(now_time)
+    else:
+        print('账号或密码错误，请重新登录')
+        login()
+
+#获取post_key
+def get_post_key():
+    url = 'https://accounts.pixiv.net/login'
+    start_url = session.get(url)
+    post_key = BeautifulSoup(start_url.text,'lxml').find('input', type = 'hidden')['value']
+    # print(post_key)
+    return post_key
+
+
+path = path_save() #自定义输入保存路径
+
+pro_path = os.getcwd() #源文件运行地址
+os.chdir(path)
+now_time = time.strftime('%Y-%m-%d')
+if os.path.exists(now_time):
+    os.chdir(now_time)
+    # print('文件夹已存在，继续执行')
+else:
+    os.mkdir(now_time)
+    os.chdir(now_time)
+
 
 session = requests.session()
 #第一次登陆后加载保存在本地的cookies
@@ -27,69 +91,7 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
     'Origin': 'https://accounts.pixiv.net'
 }
-#自定义输入保存路径
-if os.path.isfile('path_txt.txt'):
-    f = open('path_txt.txt', 'r')
-    path = f.read()
-    f.close()
 
-else:
-    path = input('请输入要保存的地址：')
-    f = open('path_txt.txt','w')
-    f.write(path)
-    f.close()
-
-#文件保存路径
-pro_path = os.getcwd() #源文件运行地址
-print(pro_path)
-os.chdir(path)
-now_time = time.strftime('%Y-%m-%d')
-if os.path.exists(now_time):
-    os.chdir(now_time)
-    # print('文件夹已存在，继续执行')
-else:
-    os.mkdir(now_time)
-    os.chdir(now_time)
-
-#获取post_key
-def get_post_key():
-    url = 'https://accounts.pixiv.net/login'
-    start_url = session.get(url)
-    post_key = BeautifulSoup(start_url.text,'lxml').find('input', type = 'hidden')['value']
-    # print(post_key)
-    return post_key
-
-#登录
-def login():
-    account = input('请输入账号：')
-    password = input('请输入密码：')
-    postdata = {
-        'post_key': get_post_key(),
-        'password': password,
-        'pixiv_id': account,
-        # 'return_to': 'https://www.pixiv.net/'
-    }
-    login_page = session.post('https://accounts.pixiv.net/api/login?lang=zh', headers=headers, data=postdata)
-    aaa = login_page.json()['body']
-    bbb = {'success': {'return_to': 'https://www.pixiv.net/'}}
-    print(aaa)
-    if aaa ==bbb:
-        os.chdir(pro_path)
-        session.cookies.save()  # 保存cookie
-        os.chdir(path)
-        os.chdir(now_time)
-    else:
-        print('账号或密码错误，请重新登录')
-        login()
-
-
-#确认是否已经登录
-def islogin():
-    return True
-
-#下载函数
-def download():
-    pass
 #主函数
 def main():
     #每日热点
@@ -153,7 +155,7 @@ def main():
         f.write(img.content)
         f.close()
     print('下载完成')
-
+    time.sleep(1000)
 
 
 if __name__ == '__main__':
@@ -164,7 +166,6 @@ if __name__ == '__main__':
         login()
 
     main()
-
 
 
 
