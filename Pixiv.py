@@ -4,8 +4,11 @@
 # v1.0 实现爬取今日榜
 # 多线程
 # 模块化
-#保存的文件夹不存在退出
-#增加爬取个人收藏入口
+# 保存的文件夹不存在退出
+# 增加爬取个人收藏入口
+# - - - - - - - - - - - - - - 代增加的功能
+# 增加多种命名方式
+# 增加根据画师下载
 
 import requests
 from bs4 import BeautifulSoup
@@ -13,6 +16,7 @@ import http.cookiejar as cookielib
 import os
 import time
 
+# 确认输入路径是否存在
 def comfirm_path(save_txt):
     path = input('请输入要保存的地址：')
     if not os.path.exists(path):
@@ -67,6 +71,47 @@ def get_post_key():
     # print(post_key)
     return post_key
 
+# 处理下载单幅图片
+def one_pic_download(url, id):
+    real_page = session.get(url)
+    real_page_img = BeautifulSoup(real_page.text, 'lxml').find_all('div', class_='wrapper')[-1].find('img')['data-src']  # 非漫画的地址
+    # print(real_page_img) #原图地址
+    pic = real_page_img[-4:]  # 扩展名
+    if os.path.isfile(id + pic):  # 如果文件存在就跳过
+        # print('跳过')
+        return True
+    img = session.get(real_page_img, headers=img_headers)
+    f = open(id + pic, 'ab')
+    f.write(img.content)
+    f.close()
+
+# 处理漫画套图
+def manga_download(url, id):
+    # 漫画套图
+    manga_url = url.replace('medium', 'manga')
+    manga_page = session.get(manga_url)
+    manga_page_imgs = BeautifulSoup(manga_page.text, 'lxml').find_all('img', class_='image ui-scroll-view')
+    page_number = 0
+    if os.path.exists(id):
+        os.chdir(id)
+        # print('文件夹已存在，继续执行')
+    else:
+        os.mkdir(id)
+        os.chdir(id)
+
+    for manga_page_img in manga_page_imgs:
+        page_number += 1
+        manga_page_img_url = manga_page_img['data-src']
+        # print(manga_page_img_url)
+        pic = manga_page_img_url[-4:]  # 扩展名
+        if os.path.isfile(id + '_' + str(page_number) + pic):  # 如果文件存在就跳过
+            # print('    文件已存在')
+            continue
+        img = session.get(manga_page_img_url, headers=img_headers)
+        f = open(id + '_' + str(page_number) + pic, 'ab')
+        f.write(img.content)
+        f.close()
+
 session = requests.session()
 #第一次登陆后加载保存在本地的cookies
 n = 0
@@ -87,126 +132,93 @@ headers = {
 
 img_headers = {
         "Host": "i.pximg.net",
-        "Referer": "https://www.pixiv.net",
+        "Referer": "https://www.pixiv.net",  # 图片服务器的headers referer是关键
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36',
     }
 
-
+# 每日热点
 def day():
-    #每日热点
     url = 'https://www.pixiv.net/ranking.php?mode=daily'
     login = session.get(url)
     num = 1 #计数
     pages = BeautifulSoup(login.text, 'lxml').find('div', class_ = 'ranking-items adjust').find_all('div', class_ = '_layout-thumbnail')
 
     for page in pages:
-        # img_url = id.find('img')['data-src'].replace('240x480', '600x600')
-        # print(img_url)
-        id = page.find('img')['data-id']
-        print('正在下载中%s/20' % num)
-        num += 1
-        url = 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + id  #id页面
-        # print(url)
-        try:
-            real_page = session.get(url)
-            real_page_img = BeautifulSoup(real_page.text, 'lxml').find_all('div', class_ = 'wrapper')[-1].find('img')['data-src'] #非漫画的地址
-            # print(real_page_img) #原图地址
-        except:
-            #漫画套图
-            manga_url = url.replace('medium', 'manga')
-            manga_page = session.get(manga_url)
-            manga_page_imgs = BeautifulSoup(manga_page.text, 'lxml').find_all('img', class_='image ui-scroll-view')
-            page_number = 0
-            if os.path.exists(id):
-                os.chdir(id)
-                # print('文件夹已存在，继续执行')
-            else:
-                os.mkdir(id)
-                os.chdir(id)
-
-            for manga_page_img in manga_page_imgs:
-                page_number+=1
-                manga_page_img_url = manga_page_img['data-src']
-                # print(manga_page_img_url)
-                pic = manga_page_img_url[-4:] # 扩展名
-                if os.path.isfile(id + '_' + str(page_number) + pic):  # 如果文件存在就跳过
-                    # print('    文件已存在')
-                    continue
-                img = session.get(manga_page_img_url, headers=img_headers)
-                f = open(id + '_' + str(page_number) + pic, 'ab')
-                f.write(img.content)
-                f.close()
-            os.chdir( path ) #返回当前日期的根文件夹
-            os.chdir(now_time)
-            continue
-
-        pic = real_page_img[-4:]  # 扩展名
-        if os.path.isfile(id + pic) : #如果文件存在就跳过
-            # print('文件已存在')
-            continue
-        img = session.get(real_page_img, headers = img_headers)
-        f = open(id + pic, 'ab')
-        f.write(img.content)
-        f.close()
-    print('下载完成')
-    time.sleep(1000)
-
-def collection (col_page):
-    url = 'https://www.pixiv.net/bookmark.php?rest=show&type=illust_all&p=' + col_page
-    login = session.get(url)
-    # print(page.text)
-
-    num = 1  # 计数
-    pages = BeautifulSoup(login.text, 'lxml').find('div', class_= 'display_editable_works').find_all('div',class_= '_layout-thumbnail')
-    os.chdir(path)
-    for page in pages:
-        id = page.find('img')['data-id']
+        id = page.find('img')['data-id']  # 获取图片id
         print('正在下载中%s/50' % num)
         num += 1
         url = 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + id  # id页面
         # print(url)
         try:
-            real_page = session.get(url)
-            real_page_img = BeautifulSoup(real_page.text, 'lxml').find_all('div', class_='wrapper')[-1].find('img')['data-src']  # 非漫画的地址
-            # print(real_page_img) #原图地址
-            pic = real_page_img[-4:]  # 扩展名
-            if os.path.isfile(id + pic):  # 如果文件存在就跳过
-                # print('文件已存在')
-                continue
-            img = session.get(real_page_img, headers=img_headers)
-            f = open(id + pic, 'ab')
-            f.write(img.content)
-            f.close()
+            # 单幅图片处理
+            one_pic_download(url, id)
         except:
-            # 漫画套图
-            manga_url = url.replace('medium', 'manga')
-            manga_page = session.get(manga_url)
-            manga_page_imgs = BeautifulSoup(manga_page.text, 'lxml').find_all('img', class_='image ui-scroll-view')
-            page_number = 0
-            if os.path.exists(id):
-                os.chdir(id)
-                # print('文件夹已存在，继续执行')
-            else:
-                os.mkdir(id)
-                os.chdir(id)
+            manga_download(url, id)
+            os.chdir( path ) #返回当前日期的根文件夹
+            os.chdir(now_time)
+            continue
 
-            for manga_page_img in manga_page_imgs:
-                page_number += 1
-                manga_page_img_url = manga_page_img['data-src']
-                # print(manga_page_img_url)
-                pic = manga_page_img_url[-4:]  # 扩展名
-                if os.path.isfile(id + '_' + str(page_number) + pic):  # 如果文件存在就跳过
-                    # print('    文件已存在')
-                    continue
-                img = session.get(manga_page_img_url, headers=img_headers)
-                f = open(id + '_' + str(page_number) + pic, 'ab')
-                f.write(img.content)
-                f.close()
+
+
+    print('下载完成')
+    time.sleep(1000)
+
+# 个人收藏
+def collection (col_page):
+    url = 'https://www.pixiv.net/bookmark.php?rest=show&type=illust_all&p=' + col_page
+    login = session.get(url)
+    num = 1  # 计数
+    pages = BeautifulSoup(login.text, 'lxml').find('div', class_= 'display_editable_works').find_all('div',class_= '_layout-thumbnail')
+    os.chdir(path)
+    for page in pages:
+        id = page.find('img')['data-id']
+        print('正在下载中%s/20' % num)
+        num += 1
+        url = 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + id  # id页面
+        # print(url)
+        try:
+            one_pic_download(url, id)
+        except:
+            manga_download(url, id)
 
             os.chdir(path)
             continue
 
-    print('一页下载完成啦')
+    print('''
+        下载完一页啦
+    ''')
+
+# 作者id下载
+def author(col_page, path, author_id):
+    url = 'https://www.pixiv.net/member_illust.php?id=' + author_id +  '&type=all&p=' + col_page  #作者页
+    login =session.get(url)
+    num = 1
+    name = BeautifulSoup(login.text,'lxml').find('a', class_='user-link').find('h1', class_='user').get_text()
+    try:
+        os.mkdir(name)
+        os.chdir(name)
+    except:
+        os.chdir(name)
+        pass
+    pages = BeautifulSoup(login.text,'lxml').find_all('li', class_='image-item')
+    for page in pages:
+        id = page.find('img')['data-id']
+        print('正在下载中%s/20' % num)
+        num += 1
+        url = 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' + id  # id页面
+        # print(url)
+        try:
+            one_pic_download(url, id)
+        except:
+            manga_download(url, id)
+            os.chdir(path)
+            os.chdir(name)
+            continue
+
+    print('''
+            下载完一页啦
+        ''')
+
 
 if __name__ == '__main__':
     if n == 1:
@@ -219,6 +231,7 @@ if __name__ == '__main__':
     choice = input('''
     如果要爬取每日图片请输入day,
     如果要爬取你的收藏请输入collection  
+    如果要爬去某作者的图片请输入author   
     ''')
 
     if choice == 'day':
@@ -238,12 +251,29 @@ if __name__ == '__main__':
         path = path_save('con_txt.txt')  # 自定义输入保存路径
         pro_path = os.getcwd()  # 源文件运行地址
         os.chdir(path)
+        start_page = int(input('请输入要开始的起始页数：'))
+        end_page = int(input('请输入你要结束的页数：'))
+        print('开始下载')
+        for col_page in range(start_page, end_page+1):
+           collection(str(col_page))  #collection 函数
+           os.chdir(path)
+        print('下载结束')
 
-        for col_page in range(1, 7):
-           collection(str(col_page))
-           # print('aa')
-
-
+    elif choice == 'author':
+        path = path_save('author_txt.txt')
+        pro_path = os.getcwd()
+        os.chdir(path)
+        author_id = input('''
+    请输入作者id
+    例如：https://www.pixiv.net/member_illust.php?id=3703525&type=all    id=3703525就是作者的id
+    ''')
+        start_page = int(input('请输入要开始的起始页数：'))
+        end_page = int(input('请输入你要结束的页数：'))
+        print('开始下载')
+        for col_page in range(start_page, end_page + 1):
+            author(str(col_page), path, str(author_id) )
+            os.chdir(path)
+        print('下载结束')
    # day()
 
     # collection()
