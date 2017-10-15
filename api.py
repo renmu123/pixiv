@@ -38,7 +38,7 @@ class Pixiv:
             img_data.append(pic_id)
             img_data.append(page_count)
             img_list.append(img_data)
-        print(path)
+        # print(path)
         self.thread_download(img_list, path)
 
     def day(self, param=''):
@@ -207,7 +207,7 @@ class Pixiv:
             pic_src = url[0]
             pic_id = url[1]
             page_count = int(url[2])
-            print(page_count)
+            # print(page_count)
             t = threading.Thread(target=self.download.download, args=[pic_src, pic_id, page_count, path])
             threads.append(t)
 

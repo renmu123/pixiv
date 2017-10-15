@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import http.cookiejar as cookielib
 from config import headers
-
+import os
 
 class Login:
     def __init__(self):
@@ -30,7 +30,8 @@ class Login:
         success = login_page.json()['body']
         success_true = {'success': {'return_to': 'https://www.pixiv.net/'}}  # 成功登录的提示
         if success == success_true:
-            session.cookies.save()  # 保存cookie
+            print(os.getcwd())
+            self.session.cookies.save()  # 保存cookie
             print('登陆成功')
         else:
             print('账号或密码错误，请重新登录')

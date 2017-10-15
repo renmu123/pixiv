@@ -1,7 +1,9 @@
 # -*- coding:utf8 -*-
+import os
+import time
+
 from api import Pixiv
 from config import conf
-import os
 
 
 class Menu:
@@ -66,12 +68,12 @@ class Menu:
             author_id = input('''
 例如：https://www.pixiv.net/member_illust.php?id=3703525&type=all    id=3703525就是作者的id
 请输入作者id：''')
-            print('''
-请输入选项：
-1   全部内容
-2   自定义页数
-            ''')
-            choice = input('请输入选项： ')
+    #             print('''
+    # 请输入选项：
+    # 1   全部内容
+    # 2   自定义页数
+    #             ''')
+    #             choice = input('请输入选项： ')
             if choice == '1' or choice == '2':
                 start_page = int(input('请输入要开始的起始页数：'))
                 end_page = int(input('请输入你要结束的页数：'))
@@ -102,3 +104,4 @@ class Menu:
 if __name__ == '__main__':
     menu = Menu()
     menu.run()
+    time.sleep(100)

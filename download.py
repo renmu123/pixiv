@@ -12,7 +12,6 @@ from login_api import Login
 class Download:
     def __init__(self):
         self.session = Login().login()
-        self.lock = threading.Lock()
 
     def _download(self, pic_src, pic_id, page_count, path):
         # print(path)
