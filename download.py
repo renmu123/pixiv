@@ -10,11 +10,13 @@ from login_api import Login
 
 
 class Download:
-    def __init__(self):
-        self.session = Login().login()
 
-    def _download(self, pic_src, pic_id, page_count, path):
+    def download_for_view(self, pic_src, pic_id, page_count, path):
         # print(path)
+        try:
+            os.mkdir(path)
+        except:
+            pass
         extension = pic_src[-4:]  # 扩展名
         for i in range(0, int(page_count)):
             name = pic_id + '_' + str(i) + extension
@@ -25,10 +27,10 @@ class Download:
                 continue
             # print(img_src)
             try:
-                img = self.session.get(img_src, headers=img_headers)
+                img = requests.get(img_src, headers=img_headers)
             except:
                 time.sleep(3)
-                img = self.session.get(img_src, headers=img_headers)
+                img = requests.get(img_src, headers=img_headers)
             with open(os.path.join(path, name), 'ab') as f:
                 f.write(img.content)
 
@@ -39,27 +41,49 @@ class Download:
                 name_path = os.path.join(path, name)
                 if os.path.isfile(name_path):
                     continue
-                self.download_png(pic_src, name_path)
+                self._download_png(pic_src, name_path)
 
     # 下载图片
     def download(self, pic_src, pic_id, page_count, path):
-        # print('下载中·······')
         extension = pic_src[-4:]  # 扩展名
         if page_count == 1:
             if os.path.isfile(os.path.join(path, pic_id + extension)):  # 如果文件存在
                 return True
             else:
-                self._download(pic_src, pic_id, page_count, path)
+                self.download_for_view(pic_src, pic_id, page_count, path)
         else:
             if os.path.exists(os.path.join(path, pic_id)):  # 判断文件夹存在
-                self._download(pic_src, pic_id, page_count, os.path.join(path, pic_id))
+                self.download_for_view(pic_src, pic_id, page_count, os.path.join(path, pic_id))
             else:
                 path_name = os.path.join(path, pic_id)
                 os.makedirs(path_name)
-                self._download(pic_src, pic_id, page_count, path_name)
+                self.download_for_view(pic_src, pic_id, page_count, path_name)
 
-    def download_png(self, pic_src, name_path):
+    # 多线程下载
+    def thread_download(self, img_list, path):
+        threads = []
+        for url in img_list:
+            # print(url)
+            pic_src = url[0]
+            pic_id = url[1]
+            page_count = int(url[2])
+            # print(page_count)
+            t = threading.Thread(target=self.download, args=[pic_src, pic_id, page_count, path])
+            threads.append(t)
+
+        for t in threads:
+            t.start()
+            while True:
+                # 判断正在运行的线程数量,如果小于5则退出while循环,
+                # 进入for循环启动新的进程.否则就一直在while循环进入死循环
+                if (threading.active_count() < 10):
+                    break
+        for t in threads:
+            t.join()
+        print('下载完成')
+
+    def _download_png(self, pic_src, name_path):
         url = pic_src[:-4] + '.png'
-        img = self.session.get(url, headers=img_headers)
+        img = requests.get(url, headers=img_headers)
         with open(name_path, 'ab') as f:
             f.write(img.content)

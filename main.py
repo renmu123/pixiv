@@ -13,13 +13,17 @@ class Menu:
             '1': self.day,
             '2': self.collection,
             '3': self.author,
-            '4': self.r_18,
-            '5': self.search,
+            '4': self.search,
         }
 
         self.page_choices = {
             '1': 'all',
             '2': 'page'
+        }
+
+        self.daily_mode = {
+            '1': 'daily',
+            '2': 'daily_r18'
         }
 
         self.mode = {
@@ -33,8 +37,7 @@ class Menu:
 爬取每日排行榜输入1 （默认下载前50张）
 爬取收藏输入2  
 爬取作者作品输入3
-爬取r18作品排行榜输入4
-爬取搜索结果输入5
+爬取搜索结果输入4
             ''')
 
     def run(self):
@@ -47,19 +50,35 @@ class Menu:
             print('{0}不是有效操作'.format(choice))
 
     def day(self):
-        self.pixiv.day()
+        while True:
+            print('''
+请输入选项：
+1   普通排行榜
+2   r18排行榜
+                    ''')
+            choice = input('请输入选项： ')
+            mode = self.daily_mode.get(choice)
+            if choice == '1' or your_choice == '2':
+                self.pixiv.day(mode)
+            else:
+                print('{0}不是有效操作'.format(choice))
 
     def collection(self):
         while True:
+            user_id = input('''
+默认为登陆用户
+请输入用户id： ''')
             print('''
 请输入选项：
 1   全部内容
 2   自定义页数
+默认为全部下载
             ''')
             choice = input('请输入选项： ')
-            your_choice = self.page_choices.get(choice)
-            if your_choice:
-                self.pixiv.collection(your_choice)
+
+            pages = self.page_choices.get(choice)
+            if pages:
+                self.pixiv.collection(user_id, pages)
             else:
                 print('{0}不是有效操作'.format(choice))
 
@@ -75,12 +94,9 @@ class Menu:
     #             ''')
     #             choice = input('请输入选项： ')
             if choice == '1' or choice == '2':
-                start_page = int(input('请输入要开始的起始页数：'))
-                end_page = int(input('请输入你要结束的页数：'))
+                start_page = input('请输入要开始的起始页数：')
+                end_page = input('请输入你要结束的页数：')
                 self.pixiv.author(author_id, start_page, end_page)
-
-    def r_18(self):
-        self.pixiv.day('_r18')
 
     def search(self):
         keyword = input('请输入关键字：')
@@ -93,11 +109,6 @@ class Menu:
         choice = input('请输入选项：')
         mode = self.mode.get(choice)
         num = int(input('请输入要爬取的前n个作品（按照星数排列）：'))
-        # if not os.path.exists(keyword):
-        #     os.mkdir(keyword)
-        #     os.chdir(keyword)
-        # else:
-        #     os.chdir(keyword)
         self.pixiv.search(keyword, num, mode)
 
 
