@@ -63,11 +63,9 @@ class Download:
     def thread_download(self, img_list, path):
         threads = []
         for url in img_list:
-            # print(url)
-            pic_src = url[0]
-            pic_id = url[1]
-            page_count = int(url[2])
-            # print(page_count)
+            pic_src = url.get('pic_src')
+            pic_id = str(url.get('pic_id'))
+            page_count = int(url.get('page_count'))
             t = threading.Thread(target=self.download, args=[pic_src, pic_id, page_count, path])
             threads.append(t)
 
@@ -80,7 +78,7 @@ class Download:
                     break
         for t in threads:
             t.join()
-        print('下载完成')
+        # print('下载完成')
 
     def _download_png(self, pic_src, name_path):
         url = pic_src[:-4] + '.png'

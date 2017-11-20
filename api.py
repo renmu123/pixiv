@@ -6,7 +6,7 @@ import os
 import time
 from threading import Thread
 import threading
-
+from collections import OrderedDict
 import requests
 from bs4 import BeautifulSoup
 from config import conf
@@ -14,29 +14,36 @@ from download import Download
 from login_api import Login
 from db import save_db
 
+
 class Pixiv:
     def __init__(self):
         self.session = Login().login()
         self.download = Download()
 
+    def get_token(self):
+        url = 'https://www.pixiv.net/ranking.php'
+        login = self.session.get(url)
+        pages = BeautifulSoup(login.text, 'lxml')
+        token = pages.find('input', attrs={'name': 'tt'})['value']
+        return token
+
     # 每日热点
     def _day_parser(self, path, mode):
-        payload = {'mode': mode}
+        token = self.get_token()
+        payload = {'mode': mode, 'p': '1', 'format': 'json', 'tt': token}
         url = 'https://www.pixiv.net/ranking.php'
-        login = requests.get(url, params=payload)
-        pages = BeautifulSoup(login.text, 'lxml')
-        ranking_items = pages.find('div', class_='ranking-items adjust').find_all('div', class_='ranking-image-item')
+        r = self.session.get(url, params=payload)
+        # print(r.url)
+        # print(r.text)
+        image_items = json.loads(r.text, object_pairs_hook=OrderedDict)
+        # print(image_items)
         img_list = []
-        for ranking_item in ranking_items:
-            pic_id = ranking_item.find('img')['data-id']  # 获取图片id
-            try:
-                page_count = int(ranking_item.find('div', class_='page-count').get_text())  # 插画页数
-            except:
-                page_count = 1
-            pic_src = ranking_item.find('img')['data-src'].replace('/c/240x480', '').replace('_master1200', '').replace(
-                'master', 'original')
-            img_list.append([pic_src, pic_id, page_count])
-        # print(path)
+        for image_item in image_items['contents']:
+            pic_src = image_item['url'].replace('/c/240x480', '').replace('_master1200', '').replace('master',
+                                                                                                     'original')
+            page_count = image_item['illust_page_count']
+            pic_id = image_item['illust_id']
+            img_list.append({'pic_src': pic_src, 'pic_id': pic_id, 'page_count': page_count})
         self.download.thread_download(img_list, path)
 
     def day(self, mode='daily'):
@@ -68,7 +75,7 @@ class Pixiv:
                 page_count = image_item.find('div', class_='page-count').get_text()
             except:
                 page_count = 1
-            img_list.append([pic_src, pic_id, page_count])
+            img_list.append({'pic_src': pic_src, 'pic_id': pic_id, 'page_count': page_count})
         self.download.thread_download(img_list, path)
         print('''
     下载完一页啦
@@ -82,7 +89,9 @@ class Pixiv:
             payload = {'id': user_id}
         r = self.session.get(url, params=payload)
         col_num = int(
-            BeautifulSoup(r.text, 'lxml').find('div', 'column-label').find('span', class_='count-badge').get_text().replace('件', ''))
+            BeautifulSoup(r.text, 'lxml').find('div', 'column-label').find('span',
+                                                                           class_='count-badge').get_text().replace('件',
+                                                                                                                    ''))
         print("共{}个作品".format(col_num))
         end_page = math.ceil(col_num / 20)
         return end_page
@@ -90,7 +99,7 @@ class Pixiv:
     def collection(self, user_id='', mode='all'):
         path = conf('collection')  # 自定义输入保存路径
         if user_id == '':
-            path = os.path.join(path, '1')
+            path = os.path.join(path, 'self')
         else:
             path = os.path.join(path, user_id)
 
@@ -129,7 +138,7 @@ class Pixiv:
                 page_count = image_item.find('div', class_='page-count').get_text()
             except:
                 page_count = 1
-            img_list.append([pic_src, pic_id, page_count])
+            img_list.append({'pic_src': pic_src, 'pic_id': pic_id, 'page_count': page_count})
         self.download.thread_download(img_list, path)
 
         print('''
@@ -180,7 +189,7 @@ class Pixiv:
             img_data.append([url, star, page_count, illust_id])
 
     # 根据页面url获得图片列表并按照star排序
-    def get_all_urls(self, page_urls, keyword):
+    def get_all_urls(self, page_urls):
         start_time = time.time()
         img_data = []
         threads = []
@@ -199,7 +208,6 @@ class Pixiv:
         for t in threads:
             t.join()
         sorted_pic_urls = sorted(img_data, key=lambda x: x[1], reverse=True)
-        save_db(sorted_pic_urls, keyword)  # 写入数据库
         end_time = time.time()
         print("搜索共花费{}秒".format(end_time - start_time))
         return sorted_pic_urls
@@ -210,7 +218,7 @@ class Pixiv:
             pic_src = img[0].replace('/c/240x240', '').replace('_master1200', '').replace('master', 'original')
             pic_id = img[3]
             page_count = img[2]
-            img_list.append([pic_src, pic_id, page_count])
+            img_list.append({'pic_src': pic_src, 'pic_id': pic_id, 'page_count': page_count})
         return img_list
 
     def search(self, keyword, num, mode):
@@ -219,7 +227,8 @@ class Pixiv:
         path = conf('search')  # 自定义输入保存路径
         path = os.path.join(path, keyword)
         page_urls = self.get_page_urls(keyword, mode)
-        sorted_img = self.get_all_urls(page_urls, keyword)
+        sorted_img = self.get_all_urls(page_urls)
+        # save_db(sorted_img, keyword)  # 写入数据库
         img_list = self.get_original_urls(sorted_img, num)
         self.download.thread_download(img_list, path)
 

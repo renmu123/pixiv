@@ -34,6 +34,10 @@ class Menu:
 
     def display_menu(self):
         print('''
+作者：renmu
+邮箱：renmu12345678@gmail.com
+
+
 爬取每日排行榜输入1 （默认下载前50张）
 爬取收藏输入2  
 爬取作者作品输入3
@@ -58,16 +62,18 @@ class Menu:
                     ''')
             choice = input('请输入选项： ')
             mode = self.daily_mode.get(choice)
-            if choice == '1' or your_choice == '2':
+            # print(mode)
+            if choice == '1' or choice == '2':
                 self.pixiv.day(mode)
             else:
                 print('{0}不是有效操作'.format(choice))
 
     def collection(self):
         while True:
+            # 其他用户的收藏作品
             user_id = input('''
-默认为登陆用户
-请输入用户id： ''')
+直接回车默认为登陆用户
+下载其他用户收藏： ''')
             print('''
 请输入选项：
 1   全部内容
@@ -87,12 +93,11 @@ class Menu:
             author_id = input('''
 例如：https://www.pixiv.net/member_illust.php?id=3703525&type=all    id=3703525就是作者的id
 请输入作者id：''')
-    #             print('''
-    # 请输入选项：
-    # 1   全部内容
-    # 2   自定义页数
-    #             ''')
-    #             choice = input('请输入选项： ')
+            print('''
+    请输入选项：
+    1   自定义页数
+                ''')
+            choice = input('请输入选项： ')
             if choice == '1' or choice == '2':
                 start_page = input('请输入要开始的起始页数：')
                 end_page = input('请输入你要结束的页数：')
@@ -116,3 +121,6 @@ if __name__ == '__main__':
     menu = Menu()
     menu.run()
     time.sleep(100)
+
+
+
